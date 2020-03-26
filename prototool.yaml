@@ -1,0 +1,12 @@
+protoc:
+  version: 3.8.0
+lint:
+  group: google
+generate:
+  go_options:
+    import_path: github.com/vvarma/voyager
+  plugins:
+    - name: go
+      type: go
+      flags: plugins=grpc
+      output: .

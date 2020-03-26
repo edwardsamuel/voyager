@@ -1,0 +1,11 @@
+{
+  "request_size": 10000,
+  "response_size": 10000,
+  "host_ports": [
+    "voyager-sever.basic.svc.cluster.local:4891"
+  ],
+  "number_requests": 10,
+  "num_threads": 10,
+  "error_rate": 0,
+  "panic_rate": 0
+}

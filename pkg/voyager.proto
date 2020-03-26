@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+
+package voyager;
+message Meta {
+    bytes data = 1;
+}
+
+message ProbeRequest {
+    int64 response_size = 1;
+    int32 response_code = 2;
+    bool should_kill_server = 3;
+    Meta meta = 4;
+
+}
+message ProbeResponse {
+    string node_name = 1;
+    string pod_name = 2;
+    google.protobuf.Timestamp server_time = 3;
+    google.protobuf.Duration process_duration = 4;
+    Meta meta = 5;
+
+}
+
+service NetworkProbe {
+    rpc Probe (ProbeRequest) returns (ProbeResponse) {
+    }
+}
+message InitiateNetworkProbe {
+    int64 request_size = 1;
+    int64 response_size = 2;
+    repeated string host_ports = 3;
+    int64 number_requests = 4;
+    int32 num_threads = 5;
+    float error_rate = 6;
+    float panic_rate = 7;
+}
+message NetworkProbeStats {
+    message Stats {
+        message Latencies {
+            google.protobuf.Duration p70 = 1;
+            google.protobuf.Duration p90 = 2;
+            google.protobuf.Duration p99 = 3;
+        }
+        int64 num_requests_completed = 1;
+        int64 num_success = 2;
+        int64 num_failure = 3;
+        Latencies latencies = 5;
+    }
+    message HostSplit {
+        string node_name = 1;
+        string pod_name = 2;
+        Stats stats = 3;
+    }
+    Stats stats = 4;
+    repeated HostSplit host_splits = 5;
+    google.protobuf.Timestamp created_at = 6;
+
+}
+service Admin {
+    rpc StartProbe (InitiateNetworkProbe) returns (stream NetworkProbeStats);
+}

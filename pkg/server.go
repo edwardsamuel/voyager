@@ -1,60 +1,86 @@
 package voyager
 
 import (
+	"context"
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
+	"net/http"
 )
 
-func ServeGRPC(address string, registerFn func(server *grpc.Server)) error {
+func ServeTCP(address string, stopC <-chan struct{}, handler func(conn net.Conn) error) (<-chan error, error) {
+	listener, e := net.Listen("tcp", address)
+	if e != nil {
+		return nil, e
+	}
+	errC := make(chan error)
+	go func() {
+		for {
+			select {
+			case _, ok := <-stopC:
+				if ok {
+					break
+				}
+			default:
+				conn, e := listener.Accept()
+				if e != nil {
+					log.Println("Exception accepting connection", e)
+					errC <- e
+				} else {
+					go func() {
+						defer func() {
+							log.Println(conn.Close())
+						}()
+						errC <- handler(conn)
+					}()
+				}
+			}
+		}
+	}()
+	return errC, nil
+}
+func ServeHTTP(address string, stopC <-chan struct{}, handlers map[string]http.Handler) (<-chan error, error) {
+	for p, h := range handlers {
+		http.Handle(p, h)
+	}
+	listener, e := net.Listen("tcp", address)
+	server := http.Server{}
+	if e != nil {
+		return nil, e
+	}
+	errC := make(chan error)
+	go func() {
+		errC <- server.Serve(listener)
+		close(errC)
+	}()
+	go func() {
+		<-stopC
+		errC <- server.Shutdown(context.Background())
+	}()
 
+	return errC, nil
+
+}
+func ServeGRPC(address string, stopC <-chan struct{}, registerFn func(server *grpc.Server)) (<-chan error, error) {
 	log.Println("Opening listener at ", address)
 	listener, e := net.Listen("tcp", address)
 	if e != nil {
-		return e
+		return nil, e
 	}
 	server := grpc.NewServer()
 	registerFn(server)
-	stopC := make(chan struct{})
 	errC := make(chan error)
-	wg := sync.WaitGroup{}
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		log.Println("Ready to serve")
 		errC <- server.Serve(listener)
 		log.Println("Stopped serving")
-	}()
-	go func() {
-		for er := range errC {
-			log.Println(er)
-		}
+		close(errC)
 	}()
 
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		<-stopC
 		log.Println("Shutting down")
 		server.GracefulStop()
 	}()
-	{
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		select {
-		case s := <-sigs:
-			log.Println("Got a signal", s)
-		case e := <-errC:
-			log.Println("Got an error", e)
-		}
-		close(stopC)
-		wg.Wait()
-		close(errC)
-		log.Println("Completed shut down")
-	}
-	return nil
+	return errC, nil
 }

@@ -30,6 +30,12 @@ service NetworkProbe {
     }
 }
 message InitiateNetworkProbe {
+    enum ProbeType {
+        UNKNOWN = 0;
+        GRPC = 1;
+        HTTP = 2;
+        TCP = 3;
+    }
     int64 request_size = 1;
     int64 response_size = 2;
     repeated string host_ports = 3;
@@ -37,6 +43,7 @@ message InitiateNetworkProbe {
     int32 num_threads = 5;
     float error_rate = 6;
     float panic_rate = 7;
+    ProbeType probe_type = 8;
 }
 message NetworkProbeStats {
     message Stats {

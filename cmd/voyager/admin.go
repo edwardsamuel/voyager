@@ -13,10 +13,12 @@ var (
 		Long: "Start the admin server",
 		Use:  "admin",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return voyager.ServeGRPC(adminAddress, func(server *grpc.Server) {
-				a := voyager.NewAdminImpl()
-				voyager.RegisterAdminServer(server, a)
-				reflection.Register(server)
+			return serve(func(stopC <-chan struct{}) (errors <-chan error, e error) {
+				return voyager.ServeGRPC(adminAddress, stopC, func(server *grpc.Server) {
+					a := voyager.NewAdminImpl()
+					voyager.RegisterAdminServer(server, a)
+					reflection.Register(server)
+				})
 			})
 		}}
 )

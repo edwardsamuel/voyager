@@ -130,11 +130,18 @@ func (s *stats) response() *NetworkProbeStats {
 
 func (a *adminImpl) StartProbe(req *InitiateNetworkProbe, stream Admin_StartProbeServer) error {
 	w := &worker{}
-	if conn, err := grpc.Dial(strings.Join(req.HostPorts, ","), grpc.WithInsecure()); err != nil {
-		return err
-	} else {
-		w.conn = conn
-		w.client = NewNetworkProbeClient(w.conn)
+	switch req.ProbeType {
+	default:
+		if conn, err := grpc.Dial(strings.Join(req.HostPorts, ","), grpc.WithInsecure()); err != nil {
+			return err
+		} else {
+			w.conn = conn
+			w.client = NewNetworkProbeClient(w.conn)
+		}
+	case InitiateNetworkProbe_HTTP:
+		w.client = NewHttpNetworkProbeClient(req.HostPorts[0])
+	case InitiateNetworkProbe_TCP:
+		w.client = NewTCPNetworkProbeClient(req.HostPorts[0])
 	}
 
 	aggChan := make(chan *unitResp, 100)

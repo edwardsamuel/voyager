@@ -1,0 +1,11 @@
+FROM golang:1.13.4
+
+RUN apt-get update && \
+    apt-get install -y supervisor
+COPY ./build/supervisor-init.sh /usr/bin/supervisor-init.sh
+ENTRYPOINT ["/bin/bash", "/usr/bin/supervisor-init.sh"]
+
+WORKDIR /code
+COPY . /code/
+RUN make
+CMD voyager

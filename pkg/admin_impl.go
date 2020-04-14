@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"log"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -104,8 +105,24 @@ func (s *stats) add(ur *unitResp) {
 }
 func (s *stats) response() *NetworkProbeStats {
 	nps := new(NetworkProbeStats)
-	for node, podStats := range s.nodePodStats {
-		for pod, stats := range podStats {
+
+	nodes := make([]string, 0, len(s.nodePodStats))
+	for node, _ := range s.nodePodStats {
+		nodes = append(nodes, node)
+	}
+	sort.Strings(nodes)
+
+	for _, node := range nodes {
+		podStats := s.nodePodStats[node]
+
+		pods := make([]string, 0, len(podStats))
+		for pod, _ := range podStats {
+			pods = append(pods, pod)
+		}
+		sort.Strings(pods)
+
+		for _, pod := range pods {
+			stats := podStats[pod]
 			if nps.Stats == nil {
 				nps.Stats = &NetworkProbeStats_Stats{}
 			}

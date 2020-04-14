@@ -54,12 +54,13 @@ func (w *worker) do(numReq int64, reqSize int64, respSize int64, errRate float32
 			ur := &unitResp{
 				expectError: req.ShouldKillServer || req.ResponseCode > 0,
 			}
-			if er != nil {
-				ur.isError = true
-			}
 			if r != nil {
 				ur.podName = r.PodName
 				ur.nodeName = r.NodeName
+			}
+			if er != nil {
+				ur.isError = true
+				log.Printf("Node: %s, Pod: %s, Err: %+v\n", ur.nodeName, ur.podName, er)
 			}
 			respChan <- ur
 		}
@@ -107,7 +108,7 @@ func (s *stats) response() *NetworkProbeStats {
 	nps := new(NetworkProbeStats)
 
 	nodes := make([]string, 0, len(s.nodePodStats))
-	for node, _ := range s.nodePodStats {
+	for node := range s.nodePodStats {
 		nodes = append(nodes, node)
 	}
 	sort.Strings(nodes)
@@ -116,7 +117,7 @@ func (s *stats) response() *NetworkProbeStats {
 		podStats := s.nodePodStats[node]
 
 		pods := make([]string, 0, len(podStats))
-		for pod, _ := range podStats {
+		for pod := range podStats {
 			pods = append(pods, pod)
 		}
 		sort.Strings(pods)
